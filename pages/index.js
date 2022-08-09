@@ -1,179 +1,155 @@
 import { Component } from "react"
 import Head from "next/head"
+import moment from "moment"
 
 import Header from "../components/header.js"
 import Sidebar from "../components/sidebar.js"
 
-import authUser from "../api/admin-user/auth.js"
-import updateSitemap from "../api/sitemap/updateSitemap.js"
+import getAllPosts from "../api/blog-posts/getAllPosts.js"
 
 export default class extends Component {
   static async getInitialProps ({req, res}) {
-    const authResult = await authUser(req)
+    const apiResult = await getAllPosts(req)
+    const getDataError = true;
 
-    if (!authResult.success) {
+    if (!apiResult.authSuccess) {
       res.writeHead(302, { Location: "/login" })
       res.end()
     }
 
-    return {}
+    return {
+      activePosts: apiResult.activePosts ? apiResult.activePosts : [],
+      upcomingPosts: apiResult.upcomingPosts ? apiResult.upcomingPosts : [],
+      getDataError: apiResult && apiResult.getDataError
+    }
   }
 
   constructor(props) {
     super(props)
     this.state = {
-      //update sitemap
-      updateSitemapLoading: false,
-      updateSitemapError: false,
-      updateSitemapSuccess: false,
-      //restart pm2
-      restartPm2Loading: false,
-      restartPm2Error: false,
-      restartPm2Success: false,
-      //send ping to search engines
-      pingLoading: false,
-      pingError: false,
-      pingSuccess: false
+      showActivePosts: true,
+      showUpcomingPosts: false
     }
   }
 
-  updateSitemapRequest = () => {
-    this.setState({updateSitemapLoading: true, updateSitemapError: false, updateSitemapSuccess: false})
-
-    const self = this
-
-    updateSitemap(function(apiResponse) {
-      if (apiResponse.submitError) {
-        self.setState({updateSitemapLoading: false, updateSitemapError: true, updateSitemapSuccess: false})
-      } else if (!apiResponse.authSuccess) {
-        window.location.href = "/login"
-      } else if (!apiResponse.success) {
-        self.setState({updateSitemapLoading: false, updateSitemapError: true, updateSitemapSuccess: false})
-      } else {
-        self.setState({updateSitemapLoading: false, updateSitemapError: false, updateSitemapSuccess: true})
-      }
+  handleActiveBtnClick = () => {
+    this.setState({
+      showActivePosts: true,
+      showUpcomingPosts: false
     })
   }
 
-  restartPm2Request = () => {
-    this.setState({restartPm2Loading: true, restartPm2Error: false, restartPm2Success: false})
-
-    // call restart PM2 function
-  }
-
-  pingSearchEnginesRequest = () => {
-    this.setState({pingLoading: true, pingError: false, pingSuccess: false})
-
-    // call ping search engines function
+  handleUpcomingBtnClick = () => {
+    this.setState({
+      showActivePosts: false,
+      showUpcomingPosts: true
+    })
   }
 
   render () {
     return (
       <div className="layout-wrapper">
         <Head>
-          <title>Sitemap | Admin</title>
+          <title>Blog Posts | Admin</title>
         </Head>
         <Header />
-        <Sidebar page="sitemap" />
+        <Sidebar page="blog-posts" />
         <div className="layout-content-container">
-          <div className="sitemap-content">
-            <div className="sitemap-header">
-              <span>Manage Sitemap</span>
+          <div className="blog-posts-content">
+            <div className="blog-posts-top-header">
+              <div className="blog-posts-page-label">
+                <span>All Blog Posts</span>
+              </div>
+              <div className="blog-posts-add-new-btn-container">
+                <a href="/blog/create-new-post">
+                  <div className="blog-posts-add-new-btn">
+                    <span>+ Add New Post</span>
+                  </div>
+                </a>
+              </div>
             </div>
-            <div className="sitemap-form-container">
-              <div className="sitemap-form-section">
-                <div className="sitemap-form-title">
-                  <span>Update Sitemap XML File</span>
-                </div>
-                <div className="sitemap-form-description">
-                  <span>This will write new content to the sitemap.xml file hosted by the fronted website.</span>
-                </div>
-                <div className="sitemap-form-btn-container">
-                  {
-                    !this.state.updateSitemapLoading ?
-                    <div onClick={this.updateSitemapRequest} className="sitemap-form-btn">
-                      <span>Update Sitemap</span>
-                    </div> :
-                    <div className="sitemap-form-btn loading">
-                      <span>Loading</span>
+            <div className="blog-posts-list-container">
+              {
+                !this.props.getDataError ?
+                <>
+                  <div className="blog-posts-list-tab-btns">
+                    <div className="blog-posts-list-tab-btn-container">
+                      <div
+                        className={this.state.showActivePosts ? "blog-posts-list-tab-btn active" : "blog-posts-list-tab-btn"}
+                        onClick={() => this.handleActiveBtnClick()}
+                      >
+                        <span>Active</span>
+                      </div>
                     </div>
-                  }
-                </div>
-                {
-                  this.state.updateSitemapSuccess ?
-                  <div className="sitemap-success-msg">
-                    <span>Success!</span>
-                  </div> : null
-                }
-                {
-                  this.state.updateSitemapError ?
-                  <div className="sitemap-error-msg">
-                    <span>An error occurred.</span>
-                  </div> : null
-                }
-              </div>
-              <div className="sitemap-form-section">
-                <div className="sitemap-form-title">
-                  <span>Restart Frontend Website PM2 Process</span>
-                </div>
-                <div className="sitemap-form-description">
-                  <span>This will make any sitemap updates live in production by restarting the PM2 process.</span>
-                </div>
-                <div className="sitemap-form-btn-container">
-                  {
-                    !this.state.restartPm2Loading ?
-                    <div onClick={this.restartPm2Request} className="sitemap-form-btn">
-                      <span>Restart PM2</span>
-                    </div> :
-                    <div className="sitemap-form-btn loading">
-                      <span>Loading</span>
+                    <div className="blog-posts-list-tab-btn-container">
+                      <div
+                        className={this.state.showUpcomingPosts ? "blog-posts-list-tab-btn active" : "blog-posts-list-tab-btn"}
+                        onClick={() => this.handleUpcomingBtnClick()}
+                      >
+                        <span>Upcoming</span>
+                      </div>
                     </div>
-                  }
-                </div>
-                {
-                  this.state.restartPm2Success ?
-                  <div className="sitemap-success-msg">
-                    <span>Success!</span>
-                  </div> : null
-                }
-                {
-                  this.state.restartPm2Error ?
-                  <div className="sitemap-error-msg">
-                    <span>An error occurred.</span>
-                  </div> : null
-                }
-              </div>
-              <div className="sitemap-form-section">
-                <div className="sitemap-form-title">
-                  <span>Ping Search Engines</span>
-                </div>
-                <div className="sitemap-form-description">
-                  <span>This will ping Google and Bing to let them know updates to the sitemap have been made.</span>
-                </div>
-                <div className="sitemap-form-btn-container">
-                  {
-                    !this.state.pingLoading ?
-                    <div onClick={this.pingSearchEnginesRequest} className="sitemap-form-btn">
-                      <span>Send Ping</span>
-                    </div> :
-                    <div className="sitemap-form-btn loading">
-                      <span>Loading</span>
+                  </div>
+                  <div className="blog-posts-list-items-table">
+                    <div className="blog-posts-list-items-table-header">
+                      <div className="blog-posts-list-items-table-header-item title">
+                        <span>Title</span>
+                      </div>
+                      <div className="blog-posts-list-items-table-header-item date">
+                        <span>Date</span>
+                      </div>
+                      <div className="blog-posts-list-items-table-header-item edit">
+                        <span></span>
+                      </div>
                     </div>
-                  }
+                    {
+                      this.state.showActivePosts && this.props.activePosts.length ?
+                      this.props.activePosts.map((post, index) => {
+                        return (
+                          <div key={index} className="blog-posts-list-items-table-item">
+                            <div className="blog-posts-list-items-table-item-data title">
+                              <span>{post.title}</span>
+                            </div>
+                            <div className="blog-posts-list-items-table-item-data date">
+                              <span>{moment.unix(post.dateTimestamp).format('MM/DD/YYYY')}</span>
+                            </div>
+                            <div className="blog-posts-list-items-table-item-data edit">
+                              <a href={`/blog/edit-post/${post.id}`}>
+                                <span>Edit</span>
+                              </a>
+                              <span> </span>
+                            </div>
+                          </div>
+                        )
+                      }) : null
+                    }
+                    {
+                      this.state.showUpcomingPosts && this.props.upcomingPosts.length ?
+                      this.props.upcomingPosts.map((post, index) => {
+                        return (
+                          <div key={index} className="blog-posts-list-items-table-item">
+                            <div className="blog-posts-list-items-table-item-data title">
+                              <span>{post.title}</span>
+                            </div>
+                            <div className="blog-posts-list-items-table-item-data date">
+                              <span>{moment.unix(post.dateTimestamp).format('MM/DD/YYYY')}</span>
+                            </div>
+                            <div className="blog-posts-list-items-table-item-data edit">
+                              <a href={`/blog/edit-post/${post.id}`}>
+                                <span>Edit</span>
+                              </a>
+                              <span> </span>
+                            </div>
+                          </div>
+                        )
+                      }) : null
+                    }
+                  </div>
+                </> :
+                <div className="blog-posts-list-get-data-error">
+                  <span>An error occurred.</span>
                 </div>
-                {
-                  this.state.pingSuccess ?
-                  <div className="sitemap-success-msg">
-                    <span>Success!</span>
-                  </div> : null
-                }
-                {
-                  this.state.pingError ?
-                  <div className="sitemap-error-msg">
-                    <span>An error occurred.</span>
-                  </div> : null
-                }
-              </div>
+              }
             </div>
           </div>
         </div>
